@@ -6,6 +6,7 @@ from scipy.sparse import csr_matrix
 from pathlib import Path
 from argparse import ArgumentParser
 from tfidf_calculator import TfidfCalculator
+import tracemalloc
 
 
 def word_to_inds(words, word_features):
@@ -63,6 +64,8 @@ if __name__ == '__main__':
                         type=str)
     args = parser.parse_args()
 
+    tracemalloc.start(15)
+    
     ts = time()
     print('loading data')
     t0 = time()
@@ -159,3 +162,8 @@ if __name__ == '__main__':
 
     # runtime
     print('took %.2f min to load, predict, retrieve predictive words and save %s for %s instances' % ((time()-ts)/60, onto, len(samples)))
+    
+    # trace memory
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"tracemalloc current={current/1e6:.1f} MB, peak={peak/1e6:.1f} MB")
+    tracemalloc.stop()

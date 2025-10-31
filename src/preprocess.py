@@ -181,7 +181,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # preprocess
-    processed_text = []
+    processed_texts = []
     retained_ids = []
 
     with open(args.input) as f:
