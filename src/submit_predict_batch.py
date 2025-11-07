@@ -1,6 +1,15 @@
 """
 This script performs prediction on the data in each chunk and submits the jobs by batch.
 
+Parameters:
+    -mem: it uses about 85GB memory to make predictions on 26,000 examples (260,000/10chunks). 
+        For the sake of safty, request 96GB. 
+    -time: it takes 40-50 mins to make predictions on 26,000 examples for one term. 
+        As there are 15 terms, by default, to run within each job, it takes about 13hrs
+        to complete a job. So, it is safe to request about 15hrs. 
+Note: in the slurm progress printout, there are time and memory trace showing. Please check
+there for the actual time and memory use. 
+
 Authors: Junxia Lin
 Date: 2025-10-07
 """
