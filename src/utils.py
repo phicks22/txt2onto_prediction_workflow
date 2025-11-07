@@ -1,4 +1,3 @@
-from typing import List, Tuple
 from pathlib import Path
 from scipy.sparse import csr_matrix
 import json
@@ -26,7 +25,7 @@ def calc_cosine_similarity(emb1, emb2):
     )
 
 
-def get_sample_inds(folds: dict, id: np.array) -> List[List[Tuple[np.array, np.array]]]:
+def get_sample_inds(folds: dict, id: np.array) -> list[list[tuple[list, list]]]:
     train_test_inds = []
     for i in sorted(folds.keys()):
         train = folds[i]["train"]
@@ -97,7 +96,7 @@ def load_label(task: str, label: str) -> pl.DataFrame:
     return label_data.to_numpy().flatten(), _index
 
 
-def load_corpus(file_: str) -> Tuple[np.array, np.array, np.array]:
+def load_corpus(file_: str) -> tuple[list, list, list]:
     """
     Load corpus data from .npz file.
 
@@ -148,7 +147,7 @@ def load_ner_data(corpus: str) -> np.array:
     return data
 
 
-def load_embeddings(file: str) -> Tuple[np.array, np.array]:
+def load_embeddings(file: str) -> tuple[list, list]:
     file_ = np.load(file)
     return file_["embeddings"], file_["words"]
 
