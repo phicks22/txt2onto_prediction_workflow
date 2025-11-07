@@ -1,5 +1,12 @@
 """
-This script split the descriptions and ids into chunks.
+This script split the descriptions and ids into chunks such that we can make predictions
+in parallel by the chunks of data to improve the efficiency. 
+
+When the dataset is getting larger, it will not be efficient to make predictions 
+on such a large dataset. It will take much longer time and larger memory to run. 
+However, spliting the data into smaller chunks allows us to make the predictions 
+in parallel, meaning we can make the prediction for the data in each chunk at 
+the same time. This helps reduce the overal running time and memory request for each job. 
 
 Authors: Junxia Lin
 Date: 2025-10-07
