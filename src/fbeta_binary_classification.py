@@ -2,14 +2,14 @@
 This script applies the fbeta-score to best classify the predicted probabilities to
 binary classes.
 
-Authors: Junxia Lin
+Authors: Junxia Lin, Parker Hicks
 Date: 2025-07-02
+Last update: 2025-10-07
 """
 
 import polars as pl
 from glob import glob
 import numpy as np
-import pandas as pd
 import os
 import json
 from pathlib import Path
@@ -20,6 +20,34 @@ from sklearn.metrics import average_precision_score as auPRC
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.model_selection import StratifiedKFold
 import tracemalloc
+
+
+def load_system_descendants(constraints: str | Path | None) -> np.ndarray | None:
+    """
+    Load system descendants from a JSON file and return a unique list of all descendant IDs.
+
+    Parameters:
+    - constraints: Path to the JSON file containing system descendants, or None.
+
+    Returns:
+    - A NumPy array of unique descendant identifiers, or None if no constraints are provided.
+    """
+    
+    if not constraints:
+        return None
+
+    constraints_path = Path(constraints)
+    if not constraints_path.exists():
+        raise FileNotFoundError(f"Constraints file not found: {constraints_path}")
+
+    with open(constraints_path, "r") as f:
+        system_descendants = json.load(f)
+
+    sys_desc = []
+    for key in system_descendants:
+        sys_desc.extend(system_descendants[key])
+
+    return np.unique(np.array(sys_desc))
 
 
 def find_best_threshold_fbeta(y_true, y_probs, beta):
@@ -87,19 +115,19 @@ def best_threshold_classify(
     task: str,
     beta: float,
     ) -> pl.DataFrame:
-    """Function to calculate the best threshold using 20% (test) of the data 
-    and apply it to the rest 80% (train) data. Also apply the best threshold to
+    """Function to calculate the best threshold using 20% of the data 
+    and apply it to the rest 80% data. Also apply the best threshold to
     the original full predicted probability data."""
 
-    # run fbeta-score to get the best threshold using the test (20%) set. 
-    ground_truths = test[task]
-    predicted_values = test["prob"]
+    # run fbeta-score to get the best threshold using the train (20%) set. 
+    ground_truths = train[task]
+    predicted_values = train["prob"]
     best_threshold, best_fbeta = find_best_threshold_fbeta(
         ground_truths, predicted_values, beta
     )
 
-    # apply the best_threshold to the train (80%) set.
-    train_bin = train.with_columns(
+    # apply the best_threshold to the test (80%) set.
+    train_bin = test.with_columns(
         (pl.col("prob") > best_threshold).cast(pl.Int8).alias("pred_binary")
     )
 
@@ -111,8 +139,8 @@ def best_threshold_classify(
     return pred_prob_bin, train_bin, best_threshold
 
 
-def save_output(fold: dict, outdir: str, task_name: str, compress=False) -> None:
-    """Save folds to json or bson dict for specified task name."""
+def save_output(fold: dict, outdir: str, task_name: str) -> None:
+    """Save folds to json for specified task name."""
     # Set folds directory
 
     outdir = os.path.join(outdir, "training_index_pred_annotation")
@@ -122,13 +150,8 @@ def save_output(fold: dict, outdir: str, task_name: str, compress=False) -> None
 
     # Save folds dict as json
     if len(fold) > 0:
-        if compress:
-            bson_data = bson.BSON.encode(fold)
-            with open(outdir_path / f"{save_task}.bson", "wb") as f:
-                f.write(bson_data)
-        else:
-            with open(outdir_path / f"{save_task}.json", "w") as f:
-                f.write(json.dumps(fold, indent=4))
+        with open(outdir_path / f"{save_task}.json", "w") as f:
+            f.write(json.dumps(fold, indent=4))
         print(f"Training set saved for {task_name}")
 
 
@@ -152,22 +175,13 @@ def fbeta_binary_classification(
     pred_label_agg_data = label_data.select(selected_columns).collect()
 
     # filter for the system descendants
-    if constraints:
-        with open(constraints, "r") as f:
-            system_descendants = json.load(f)
-
-        sys_desc = []
-        for key in system_descendants:
-            sys_desc.extend(system_descendants[key])
-
-        sys_desc = np.array(sys_desc)
-        sys_desc = np.unique(sys_desc)
+    descendants = load_system_descendants(constraints)
 
     # loop over the prediction file of each term
     all_best_th = []
     for file in tqdm(glob(f"{prob_dir}/*.csv"), total=len(glob(f"{prob_dir}/*.csv"))):
         task = Path(file).stem.removesuffix("__preds").replace("_", ":")
-        if constraints and (task in sys_desc):
+        if descendants is not None and task in descendants:
             
             # trace memory
             tracemalloc.start(15)
@@ -176,10 +190,6 @@ def fbeta_binary_classification(
 
             # read in the predicted probability data
             pred_prob_data = pl.read_csv(file).select(["ID", "prob"])
-            # the index row may also be predicted, to get rid of those rows
-            pred_prob_data = pred_prob_data.filter(pl.col("ID").str.contains("GSE|GSM"))
-            print("original probability data")
-            print(pred_prob_data)
 
             # subset the label data to only the group, index (sample/study), and the label term columns
             # Remove rows where the label is 0
@@ -206,11 +216,11 @@ def fbeta_binary_classification(
             # drop the rows with na (there could be NA in prob).
             pred_label_data = pred_label_data.drop_nulls()
 
-            # stratified (group) split
+            # stratified Kfold split
             X = pred_label_data["index"].to_numpy()
             y = pred_label_data[task].to_numpy()
             
-            # split
+            # split (5 folds by default)
             groups = None if is_study else pred_label_data[columns_to_select[0]].to_numpy()
             train_set, test_set = stratified_split(X, y, groups)
 
@@ -225,11 +235,13 @@ def fbeta_binary_classification(
                 # fbeta binary classification
                 # get the best threshold
                 # apply the threshold to the full set of predicted probabilities. 
+                # Note: test_set (20% of the data) from stratified_split is used 
+                # as the training data to get the best threshold below.
                 pred_prob_data_bin, pred_label_data_trn_bin, best_threshold = (
                     best_threshold_classify(
                         pred_prob_data,
-                        pred_label_data_trn,
                         pred_label_data_tst,
+                        pred_label_data_trn,
                         task,
                         beta,
                     )
@@ -250,11 +262,8 @@ def fbeta_binary_classification(
                 # merge the classified results to the aggregate dataset - train data
                 selected_columns = columns_to_select + ["index", "pred_binary"]
                 pred_label_data_trn_bin = pred_label_data_trn_bin.select(
-                    selected_columns
-                )
-                pred_label_data_trn_bin = pred_label_data_trn_bin.rename(
-                    {"pred_binary": task}
-                )
+                                                selected_columns
+                                            ).rename({"pred_binary": task})
                 selected_columns = columns_to_select + ["index"]
                 pred_label_agg_data = pred_label_agg_data.join(
                     pred_label_data_trn_bin, on=selected_columns, how="left"
@@ -262,10 +271,6 @@ def fbeta_binary_classification(
 
                 # merge the classified results to the aggregate dataset - full predicted probability samples
                 pred_prob_data_bin = pred_prob_data_bin.select(["ID", "pred_binary"]).rename({"pred_binary": task})
-
-                print(pred_prob_data_bin)
-                num_unique = pred_prob_data_bin["ID"].n_unique()
-                print(f"The number of unique IDs is {num_unique}")
                 
                 if pred_prob_data_agg_bin is None:
                     pred_prob_data_agg_bin = pred_prob_data_bin
@@ -273,10 +278,6 @@ def fbeta_binary_classification(
                     pred_prob_data_agg_bin = pred_prob_data_agg_bin.join(
                         pred_prob_data_bin, on="ID", how="left"
                     )
-
-                print(pred_prob_data_agg_bin)
-                num_unique = pred_prob_data_agg_bin["ID"].n_unique()
-                print(f"The number of unique IDs is {num_unique}")
                 
                 # save the index (study/sample) id
                 train_index = {}
@@ -291,15 +292,18 @@ def fbeta_binary_classification(
             print(f"tracemalloc current={current/1e6:.1f} MB, peak={peak/1e6:.1f} MB")
             tracemalloc.stop()
     
+        else:
+            print(f"Either system descendants are not provided or {task} is not a system descendant.")
+            
     # save the best thresholds
-    best_th_df = pd.DataFrame(
-        all_best_th, columns=["task", "best_threshold", "prior", "log2(auprc/prior)"]
+    best_th_df = pl.DataFrame(
+        all_best_th,
+        schema=["task", "best_threshold", "prior", "log2(auprc/prior)"]
     )
-    best_th_df.to_csv(
+
+    best_th_df.write_csv(
         f"{index_out_dir}/f{beta}_best_threshold.csv",
-        header=True,
-        index=False,
-        sep="\t",
+        separator="\t"
     )
 
     # remove rows where all columns except "group" and "index" are null (NA)
