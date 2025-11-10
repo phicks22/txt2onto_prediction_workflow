@@ -8,6 +8,7 @@ Date: 2025-10-07
 import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
+from utils import check_outdir
 from argparse import ArgumentParser
 
 def combine_chunk(
@@ -24,8 +25,7 @@ def combine_chunk(
     file_names = [f.name for f in batch_dirs[0].glob('*.csv')]
     
     # Create an output directory to store combined files
-    out = Path(out)
-    out.mkdir(exist_ok=True)
+    out = check_outdir(out)
     
     # Combine CSV files with the same name across all batch folders
     for file_name in tqdm(file_names):
