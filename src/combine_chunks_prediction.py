@@ -5,7 +5,7 @@ Authors: Junxia Lin
 Date: 2025-10-07
 """
 
-import pandas as pd
+import polars as pl
 from pathlib import Path
 from tqdm import tqdm
 from utils import check_outdir
@@ -33,11 +33,13 @@ def combine_chunk(
         for batch_dir in batch_dirs:
             file_path = batch_dir / file_name
             if file_path.exists():
-                df = pd.read_csv(file_path)
+                df = pl.read_csv(file_path)
                 dfs.append(df)
+        
         # Concatenate all dataframes and save to a new CSV
-        combined_df = pd.concat(dfs, ignore_index=True)
-        combined_df.to_csv(out / file_name, index=False)
+        if dfs:
+            combined_df = pl.concat(dfs, how="vertical")
+            combined_df.write_csv(out / file_name)
     
     print(f"Combined files saved to: {out}")
 
