@@ -39,6 +39,8 @@ def combine_chunk(
         # Concatenate all dataframes and save to a new CSV
         if dfs:
             combined_df = pl.concat(dfs, how="vertical")
+            combined_df = combined_df.filter(pl.col("ID").str.contains("GSE|GSM"))
+            combined_df = combined_df.unique(subset=["ID"], keep="first")
             combined_df.write_csv(out / file_name)
     
     print(f"Combined files saved to: {out}")

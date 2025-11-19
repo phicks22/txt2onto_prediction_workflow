@@ -94,7 +94,7 @@ def submit_predict_batch(
         job_script.append(f"#SBATCH --qos={qos}")
         job_script.append(f"#SBATCH --output={SLURM_DIR}/progress_%j.out")
         job_script.append("module load miniforge")
-        job_script.append("conda activate text-omics")
+        job_script.append("conda activate txt2onto2")
         job_script.append(f"cd {SRC_DIR}")
 
         # Create command
