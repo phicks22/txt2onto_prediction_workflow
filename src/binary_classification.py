@@ -422,7 +422,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--method", 
-        help="The method to generate the best threshold, choose from (Fbeta, MCC, Balanced_accuracy).", 
+        help="The method to generate the best threshold, choose from (fbeta, mcc, balanced_accuracy).", 
         default="Fbeta",
         type=str
     )
