@@ -9,9 +9,9 @@
 
 module load miniforge
 conda activate txt2onto2
-cd /projects/$USER/txt2onto2.0/src
+cd /projects/$USER/txt2onto_prediction_workflow/src
 
-data_dir=/projects/$USER/txt2onto_prediction_workflow/results/study/predictions_prob
+data_dir=/projects/$USER/txt2onto_prediction_workflow/results/study/predictions_prob_old
 n_chunk=10
 
 python combine_chunks_prediction.py \

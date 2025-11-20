@@ -15,8 +15,8 @@ prob_path=/projects/$USER/txt2onto_prediction_workflow/results/study
 
 python threshold_annotation_analysis.py \
 	-label_dir "$label_path"/true_label__inst_type=study__task=disease.parquet \
-	-prob_dir "$prob_path"/predictions_prob/combined_files \
-	-best_threshold "$prob_path"/f0.5_best_threshold.csv \
-	-annotations "$prob_path"/study_description_txt2onto2_pred_annotations_f05.parquet \
-	-outdir "$prob_path"/threshold_annotation_analysis_f05.csv \
+	-prob_dir "$prob_path"/predictions_prob_old/combined_files \
+	-best_threshold "$prob_path"/Balanced_accuracy_best_threshold.csv \
+	-annotations "$prob_path"/study_description_txt2onto2_pred_annotations_Balanced_accuracy.parquet \
+	-outdir "$prob_path"/threshold_annotation_analysis_Balanced_accuracy.csv \
 	-is_study True
