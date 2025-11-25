@@ -18,7 +18,7 @@ This repository contains a  workflow for generating predicted annotations on stu
   - `split_descriptions_ids_into_chunks.py`: Script to split the descriptions and ids data into chunks. 
   - `submit_predict_batch.py`: Script to submit the predictions by batch. 
   - `combine_chunks_prediction.py`: Script to combine the predictions from each chunk of the data. 
-  - `fbeta_binary_classification.py`: Script to generate the annotations by applying fbeta method to find the best threshold. 
+  - `binary_classification.py`: Script to generate the annotations by applying various method to find the best threshold. 
   - `threshold_annotation_analysis.py`: Script to generate the statistics used for threshold & annotation analysis. 
 
 - **results**: Contains the predictions, resulting best threshold statistics, and predicted annotations. 
@@ -29,7 +29,7 @@ This repository contains a  workflow for generating predicted annotations on stu
   - `embeddings_study.sh`: Shell script to generate embeddings for preprocessed descriptions.
   - `predict_chunk_batch.sh`: Shell script to run predictions using the MONDO model files by chunk and batch.
   - `combine_chunks_prediction.sh`: Shell script to combine the resutling predictions of each chunk.
-  - `fbeta_classification_study.sh`: Shell script to classify the prediction probabilities into binary class and generate annotations. 
+  - `classification_study.sh`: Shell script to classify the prediction probabilities into binary class and generate annotations. 
   - `threshold_annotation_analysis_study.sh`: Shell script to generate necessary threshold and annotation statistics. 
 
 - **README.md**: This file, providing an overview of the workflow.
@@ -57,8 +57,8 @@ This repository contains a  workflow for generating predicted annotations on stu
     - The relationship between this two parameters is: `total_slurm_job = total_term/batch_size * n_chunks`. Please note that the maximum number of slurm jobs allowed to submit to alpine at the same time is 1000. 
     - The `predict_chunk_batch.py` script will automatically scan the completed terms in each chunk in the directory and skip them. You can re-run the script to finish the predictions for the remaining terms if there are any left. 
 
-### 5. Run fbeta binary classification
-- **fbeta binary classification**: The `fbeta_binary_classification.py` apply fbeta method to classify predictions into binary classes and generate the annotations for each disease term. 
+### 5. Run binary classification
+- **binary classification**: The `binary_classification.py` apply a selected method to classify predictions into binary classes and generate the annotations for each disease term. 
 
 ### 6. Generate threshold and annotation statistics
 - **statistics**: The `threshold_annotation_analysis.py` generates the necessary statistics used to analyze the generated best thresholds and annotations.
